@@ -4,7 +4,8 @@
   "description": "",
   "main": "discord_bot.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node discord_bot.js"
   },
   "author": "",
   "license": "ISC",
