@@ -1,13 +1,11 @@
 var Discord = require('discord.js');
 var settings = require('./settings.json');
-var fs = require('fs');
-var request = require('request');
+var youtubeStream = require('youtube-audio-stream')
 
 var bot = new Discord.Client();
 
 let queue = [];
 let playing = false;
-let nowPlaying = "";
 
 var commands = {
     "ping": {
@@ -42,15 +40,15 @@ var commands = {
             bot.sendMessage(message.channel, "You have to bring a link with the command");
           } else {
             playing = true;
-            addToQueue(getVideoId(args[0]), message);
+            addToQueue(args[0], message);
           }
         }
     },
 
-    "listqueue": {
+    "queuesize": {
         description: "List the play queue",
         process: function(bot, message, args) {
-          getSongQueue(message);
+          bot.reply(message, "There are " + queue.length + " songs in queue");
         }
     },
 
@@ -75,17 +73,19 @@ var commands = {
         }
     },
 
-    "playing": {
-        description: "Prints whats playing",
-        process: function(bot, message, args) {
-          bot.sendMessage(message.channel, nowPlaying);
-        }
-    },
-
     "skip": {
         description: "Skip to the next song in queue",
         process: function(bot, message, args) {
           playNextTrack();
+        }
+    },
+
+    "join": {
+        description: "Selects in which channel the bot should live",
+        process: function(bot, message, args) {
+          bot.joinVoiceChannel(args[0], function(error) {
+      		    console.log(error.message);
+      	  });
         }
     },
 };
@@ -133,33 +133,17 @@ bot.on("message", function(message){
     }
 });
 
+function checkQueue() {
+	if(playing && !queueEmpty() && !bot.voiceConnection.playing) {
+		playNextTrack();
+	}
+
+	setTimeout(checkQueue, 5000);
+}
+
 function addToQueue(videoID, message) {
-  var baseURL = "https://savedeo.com/download?url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3D";
-
-  request(baseURL + videoID, function (error, response, body) {
-
-		if (!error && response.statusCode == 200) {
-			let cheerio = require('cheerio'), $ = cheerio.load(body);
-      let title = $('title').text();
-
-      //if(title.indexOf('SaveDeo') != -1) {
-				//bot.reply(message, "Sorry, I couldn't get audio track for that video.");
-				//return;
-			//}
-
-			let audioURL = $('#main div.clip table tbody tr th span.fa-music').first().parent().parent().find('td a').attr('href');
-
-			queue.push({
-        title: title,
-        url: audioURL,
-      });
-
-      bot.reply(message, "I added " + title + " to the queue! :)");
-    } else {
-      bot.reply(message, "And it was at that moment Daniel knew, he fucked up. In addToQueue");
-      console.log(error);
-    }
-  });
+  queue.push(videoID);
+  bot.reply(message, "Added song to queue! :)");
 }
 
 function playNextTrack() {
@@ -168,16 +152,12 @@ function playNextTrack() {
 		return;
 	}
 
-	bot.voiceConnection.playFile(queue[0]['url'], {volume: 0.2});
-
-	nowPlaying = queue[0]['title'];
-	//nowPlayingUser = queue[0]['user'];
-
-	//console.log(getTime() +  "NP: \"" + nowPlayingTitle + "\" (by " + nowPlayingUser + ")");
-
-	//if(playing) {
-		//bot.sendMessage(bot.servers.get('name', serverName).channels.get('name', textChannelName), "Now Playing: \"" + nowPlayingTitle + "\" (requested by " + queue[0]['mention'] + ")");
-	//}
+  try{
+    let stream = youtubeStream(queue[0]);
+    bot.voiceConnection.playRawStream(stream, {volume: 0.2});
+  } catch (exception) {
+    console.log(exception);
+  }
 
 	queue.splice(0,1);
 }
@@ -185,16 +165,7 @@ function playNextTrack() {
 function stopPlaying(message) {
   bot.voiceConnection.stopPlaying();
   playing = false;
-  nowPlaying = "None";
   bot.sendMessage(message, "Stopped playing audio");
-}
-
-function checkQueue() {
-	if(playing && !queueEmpty() && !bot.voiceConnection.playing) {
-		playNextTrack();
-	}
-
-	setTimeout(checkQueue, 5000);
 }
 
 function clearQueue(message) {
@@ -204,53 +175,6 @@ function clearQueue(message) {
 
 function queueEmpty() {
   return queue.length === 0;
-}
-
-function getVideoId(string) {
-	var searchToken = "?v=";
-	var i = string.indexOf(searchToken);
-
-	if(i == -1) {
-		searchToken = "&v=";
-		i = string.indexOf(searchToken);
-	}
-
-	if(i == -1) {
-		searchToken = "youtu.be/";
-		i = string.indexOf(searchToken);
-	}
-
-	if(i != -1) {
-		var substr = string.substring(i + searchToken.length);
-		var j = substr.indexOf("&");
-
-		if(j == -1) {
-			j = substr.indexOf("?");
-		}
-
-		if(j == -1) {
-			return substr;
-		} else {
-			return substr.substring(0,j);
-		}
-	}
-
-	return string;
-}
-
-function getSongQueue(message) {
-
-	var response = "";
-
-	if(queueEmpty()) {
-		response = "the queue is empty.";
-	} else {
-		for(var i = 0; i < queue.length; i++) {
-			response += "\"" + queue[i]['title'] + "\ \n";
-		}
-	}
-
-	bot.reply(message, response);
 }
 
 bot.login(settings.email, settings.password);
