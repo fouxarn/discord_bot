@@ -1,6 +1,6 @@
 var Discord = require('discord.js');
 var settings = require('./settings.json');
-var youtubeStream = require('youtube-audio-stream')
+var youtubeStream = require('youtube-audio-stream');
 
 var bot = new Discord.Client();
 
@@ -36,7 +36,7 @@ var commands = {
     "queue": {
         description: "Add audio from a youtube link to the queue",
         process: function(bot, message, args) {
-          if (!args) {
+          if (args.length === 0) {
             bot.sendMessage(message.channel, "You have to bring a link with the command");
           } else {
             playing = true;
@@ -154,6 +154,9 @@ function playNextTrack() {
 
   try{
     let stream = youtubeStream(queue[0]);
+    stream.on('error', function(error) {
+      console.log(error);
+    });
     bot.voiceConnection.playRawStream(stream, {volume: 0.2});
   } catch (exception) {
     console.log(exception);
@@ -177,4 +180,42 @@ function queueEmpty() {
   return queue.length === 0;
 }
 
-bot.login(settings.email, settings.password);
+bot.login(settings.email, settings.password).catch((e) => {
+  try {
+    if (e.status === 400 && ~e.response.error.text.indexOf('email')) {
+      console.log('Error: You entered a bad email!');
+    } else if (e.status === 400 && ~e.response.error.text.indexOf('password')) {
+      console.log('Error: You entered a bad password!');
+    } else {
+      console.log(e);
+    }
+  } catch (err) {
+    console.log(e);
+  }
+});
+
+// Handle discord.js warnings
+bot.on('warn', (m) => console.log('[warn]', m));
+bot.on('debug', (m) => console.log('[debug]', m));
+
+// Taget från https://github.com/meew0/Lethe/blob/master/lethe.js#L571
+process.on('uncaughtException', function(err) {
+  // Handle ECONNRESETs caused by `next` or `destroy`
+  if (err.code == 'ECONNRESET') {
+    // Yes, I'm aware this is really bad node code. However, the uncaught exception
+    // that causes this error is buried deep inside either discord.js, ytdl or node
+    // itself and after countless hours of trying to debug this issue I have simply
+    // given up. The fact that this error only happens *sometimes* while attempting
+    // to skip to the next video (at other times, I used to get an EPIPE, which was
+    // clearly an error in discord.js and was now fixed) tells me that this problem
+    // can actually be safely prevented using uncaughtException. Should this bother
+    // you, you can always try to debug the error yourself and make a PR.
+    console.log('Got an ECONNRESET! This is *probably* not an error. Stacktrace:');
+    console.log(err.stack);
+  } else {
+    // Normal error handling
+    console.log(err);
+    console.log(err.stack);
+    process.exit(0);
+  }
+});
