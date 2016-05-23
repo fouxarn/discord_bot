@@ -1,6 +1,7 @@
 var Discord = require('discord.js');
 var settings = require('./settings.json');
-var youtubeStream = require('youtube-audio-stream')
+var youtubeStream = require('youtube-audio-stream');
+var https = require('https');
 
 var bot = new Discord.Client();
 
@@ -88,6 +89,18 @@ var commands = {
       	  });
         }
     },
+
+    "queuelist": {
+        description: "Adds all audio from a youtube playlist.",
+        process: function(bot, message, args) {
+          if (!args) {
+            bot.sendMessage(message.channel, "You have to bring a link with the command");
+          } else {
+            var id = args[0].match(/playlistId\=([^&]+)&/);
+            queueList(id[1], "", message);
+          }
+        }
+    }
 };
 
 bot.on("ready", function() {
@@ -175,6 +188,35 @@ function clearQueue(message) {
 
 function queueEmpty() {
   return queue.length === 0;
+}
+
+//Queue a playlist from youtube. Be sure to add in the settings for your api key (googleapis)
+function queueList(playlist, nextPage, message) {
+    var opts = {
+        host: 'www.googleapis.com',
+        port: 80,
+        path: '/youtube/v3/playlistItems?part=contentDetails&playlistId=' + playlist + '&maxResults=50&key=' + settings.youtubeApiKey,
+        method: 'GET'
+    };
+    if(nextPage.length > 0) {
+        opts.path = path: '/youtube/v3/playlistItems?part=contentDetails&playlistId=' + playlist + '&pageToken=' + nextPage + '&maxResults=50&key=' + settings.youtubeApiKey
+    }
+    var req = https.request(opts, (res) => {
+        res.on('data', (d) => {
+            var data = JSON.parse(d);
+            for(var video in data.items){
+                playing = true;
+                addToQueue(video.contentDetails.videoID, message);
+            });
+            if(data.nextPageToken !== undefined) {
+                queueList(playlist, data.nextPageToken, message);
+            }
+        });
+    });
+    req.end();
+    req.on('error', (e) => {
+        console.error(e);
+    });
 }
 
 bot.login(settings.email, settings.password);
