@@ -89,9 +89,9 @@ var commands = {
         }
     },
     "cat": {
-      description: "I will give you my favorit cat image <3",
+      description: "I will give you my favorite cat image <3",
       process: function(bot, message, args) {
-        bot.sendFile(message, "http://placekitten.com/200/300", "cat.png", (err, msg) => {
+        bot.sendFile(message, "http://placekitten.com/"+Math.floor((Math.random() * 900) + 100)+"/"+Math.floor((Math.random() * 900) + 100)+"", "cat.png", (err, msg) => {
     if(err)
       console.log("couldn't send image:", err);
   });
