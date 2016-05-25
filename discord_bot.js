@@ -88,7 +88,6 @@ var commands = {
       	  });
         }
     },
-
     "cat": {
       description: "I will give you my favorit cat image <3",
       process: function(bot, message, args) {
@@ -98,20 +97,37 @@ var commands = {
           });
       }
     },
+    "joinme": {
+        description: "Join the channel of the user",
+        process: function(bot, message, args) {
+            if(message.author.voiceChannel) {
+                bot.joinVoiceChannel(message.author.voiceChannel, function(error) {
+            		    console.log(error.message);
+            	  });
+            }
+        }
+    },
+
+    "leave": {
+        description: "Makes the bot leave the channel",
+        process: function(bot, message, args) {
+            bot.leaveVoiceChannel(bot.voiceConnection.voiceChannel);
+        }
+    }
 };
 
 bot.on("ready", function() {
-    console.log("Ready! Serving in " + bot.channels.length + " channels :)");
-    let channel = bot.channels.get("id", 139438913591836672);
-    //let channel = bot.channels.get("id", 98833571774468096);
-    bot.joinVoiceChannel(channel, function(error) {
-		    console.log(error.message);
-	  });
+    console.log("Ready! Serving on " + bot.servers.length + " servers :)");
+    bot.servers.forEach(function(server) {
+      if(server.channels.get("name", getBotChannelName(bot)) == null) {
+        console.log("The channel '" + getBotChannelName(bot) + "' doesn't exist on server " + server.name);
+      }
+    });
     checkQueue();
 });
 
 bot.on("message", function(message){
-    if (message.author.id != bot.user.id && message.content[0] === '!') {
+    if (message.channel.name == getBotChannelName(bot) && message.author.id != bot.user.id && message.content[0] === '!') {
         console.log("Treating " + message.content + " from " + message.author.username + " as a command.");
         let command = message.content.substring(1).split(" ");
         let cmd = commands[command[0]];
@@ -142,6 +158,10 @@ bot.on("message", function(message){
         }
     }
 });
+
+function getBotChannelName(client) {
+    return (settings.channelName).toLowerCase();
+}
 
 function checkQueue() {
 	if(playing && !queueEmpty() && !bot.voiceConnection.playing) {
