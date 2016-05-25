@@ -88,8 +88,6 @@ var commands = {
       	  });
         }
     },
-
-<<<<<<< HEAD
     "cat": {
       description: "I will give you my favorit cat image <3",
       process: function(bot, message, args) {
@@ -99,7 +97,6 @@ var commands = {
           });
       }
     },
-=======
     "joinme": {
         description: "Join the channel of the user",
         process: function(bot, message, args) {
@@ -117,7 +114,6 @@ var commands = {
             bot.leaveVoiceChannel(bot.voiceConnection.voiceChannel);
         }
     }
->>>>>>> Bot listens to its own channel, allowing for multiple bots on each server
 };
 
 bot.on("ready", function() {
