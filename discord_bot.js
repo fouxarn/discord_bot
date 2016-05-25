@@ -219,19 +219,9 @@ function queueEmpty() {
   return queue.length === 0;
 }
 
-bot.login(settings.email, settings.password).catch((e) => {
-  try {
-    if (e.status === 400 && ~e.response.error.text.indexOf('email')) {
-      console.log('Error: You entered a bad email!');
-    } else if (e.status === 400 && ~e.response.error.text.indexOf('password')) {
-      console.log('Error: You entered a bad password!');
-    } else {
-      console.log(e);
-    }
-  } catch (err) {
-    console.log(e);
-  }
-});
+bot.loginWithToken(settings.token).catch((error) => {
+  console.log(error);
+})
 
 // Handle discord.js warnings
 bot.on('warn', (m) => console.log('[warn]', m));
