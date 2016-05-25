@@ -6,6 +6,8 @@ A bot for discord with youtubing capabilitys
 ```sh
 {
 	"email" : "discord mail",
-	"password": "discord password"
+	"password": "discord password",
+	
+	"channelPrefix": "Bot-"
 }
 ```
