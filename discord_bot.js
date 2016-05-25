@@ -118,16 +118,10 @@ var commands = {
 
 bot.on("ready", function() {
     console.log("Ready! Serving on " + bot.servers.length + " servers :)");
-    bot.servers.forEach(function(server, index) {
-        console.log("Server: " + server.name);
-        console.log("Channel name: "+ getBotChannelName(bot));
-        if(server.channels.get("name", getBotChannelName(bot)) == null) {                  // DOESNT WORK, HAS TO FIX
-            bot.createChannel(server, getBotChannelName(bot), function(err, ch) {
-                if(err) {
-                    console.log(err);
-                }
-            });
-        }
+    bot.servers.forEach(function(server) {
+      if(server.channels.get("name", getBotChannelName(bot)) == null) {
+        console.log("The channel '" + getBotChannelName(bot) + "' doesn't exist on server " + server.name);
+      }
     });
     checkQueue();
 });
@@ -166,7 +160,7 @@ bot.on("message", function(message){
 });
 
 function getBotChannelName(client) {
-    return (settings.channelPrefix + client.user.username).toLowerCase();
+    return (settings.channelName).toLowerCase();
 }
 
 function checkQueue() {
