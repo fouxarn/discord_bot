@@ -88,8 +88,9 @@ var commands = {
       	  });
         }
     },
+
     "cat": {
-      description: "I will give you my favorit cat image <3",
+      description: "I will give you my favorite cat image <3",
       process: function(bot, message, args) {
         bot.sendFile(message, "http://placekitten.com/" + (Math.floor((Math.random() * 900) + 100)+"/"+Math.floor((Math.random() * 900) + 100)), "cat.png", (err, msg) => {
           console.log()
@@ -98,6 +99,7 @@ var commands = {
           });
       }
     },
+
     "joinme": {
         description: "Join the channel of the user",
         process: function(bot, message, args) {
@@ -114,7 +116,7 @@ var commands = {
         process: function(bot, message, args) {
             bot.leaveVoiceChannel(bot.voiceConnection.voiceChannel);
         }
-    }
+    },
 };
 
 bot.on("ready", function() {
