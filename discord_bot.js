@@ -1,6 +1,6 @@
 var Discord = require('discord.js');
 var settings = require('./settings.json');
-var youtubeStream = require('youtube-audio-stream');
+var ytdl = require('ytdl-core');
 
 var bot = new Discord.Client();
 
@@ -163,10 +163,16 @@ function playNextTrack() {
 	}
 
   try{
-    let stream = youtubeStream(queue[0]);
+    var options = {
+      filter: (format) => format.container === 'mp4',
+      quality: 'lowest',
+    };
+    let stream = ytdl(queue[0], options);
+    //console.log(ytdl.getInfo(queue[0]));
     stream.on('error', function(error) {
       console.log(error);
     });
+
     bot.voiceConnection.playRawStream(stream, {volume: 0.2});
   } catch (exception) {
     console.log(exception);
