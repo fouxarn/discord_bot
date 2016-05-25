@@ -11,6 +11,6 @@
   "license": "ISC",
   "dependencies": {
     "discord.js": "^7.0.0",
-    "youtube-audio-stream": "0.0.24"
+    "ytdl-core": "^0.7.15"
   }
 }

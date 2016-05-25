@@ -1,6 +1,6 @@
 var Discord = require('discord.js');
 var settings = require('./settings.json');
-var youtubeStream = require('youtube-audio-stream');
+var ytdl = require('ytdl-core');
 
 var bot = new Discord.Client();
 
@@ -88,15 +88,18 @@ var commands = {
       	  });
         }
     },
+
     "cat": {
-      description: "I will give you my favorit cat image <3",
+      description: "I will give you my favorite cat image <3",
       process: function(bot, message, args) {
-        bot.sendFile(message, "http://placekitten.com/200/300", "cat.png", (err, msg) => {
+        bot.sendFile(message, "http://placekitten.com/" + (Math.floor((Math.random() * 900) + 100)+"/"+Math.floor((Math.random() * 900) + 100)), "cat.png", (err, msg) => {
+          console.log()
           if(err)
             console.log("couldn't send image:", err);
           });
       }
     },
+
     "joinme": {
         description: "Join the channel of the user",
         process: function(bot, message, args) {
@@ -113,7 +116,7 @@ var commands = {
         process: function(bot, message, args) {
             bot.leaveVoiceChannel(bot.voiceConnection.voiceChannel);
         }
-    }
+    },
 };
 
 bot.on("ready", function() {
@@ -183,10 +186,16 @@ function playNextTrack() {
 	}
 
   try{
-    let stream = youtubeStream(queue[0]);
+    var options = {
+      filter: (format) => format.container === 'mp4',
+      quality: 'lowest',
+    };
+    let stream = ytdl(queue[0], options);
+    //console.log(ytdl.getInfo(queue[0]));
     stream.on('error', function(error) {
       console.log(error);
     });
+
     bot.voiceConnection.playRawStream(stream, {volume: 0.2});
   } catch (exception) {
     console.log(exception);
