@@ -34,6 +34,7 @@ var commands = {
     },
 
     "queue": {
+        usage: "[youtube-url]",
         description: "Add audio from a youtube link to the queue",
         channel: getBotChannelName(),
         process: function(bot, message, args) {
@@ -87,6 +88,7 @@ var commands = {
     },
 
     "join": {
+        usage: "[channel_id]",
         description: "Selects in which channel the bot should live",
         channel: getBotChannelName(),
         process: function(bot, message, args) {
@@ -100,7 +102,6 @@ var commands = {
       description: "I will give you my favorite cat image <3",
       process: function(bot, message, args) {
         bot.sendFile(message, "http://placekitten.com/" + (Math.floor((Math.random() * 900) + 100)+"/"+Math.floor((Math.random() * 900) + 100)), "cat.png", (err, msg) => {
-          console.log()
           if(err)
             console.log("couldn't send image:", err);
           });
