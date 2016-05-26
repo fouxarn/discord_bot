@@ -6,7 +6,8 @@ A bot for discord with youtubing capabilitys
 ```sh
 {
 	"token": "generated bot token",
-	"channelName": "bot listen channel"
+	"musicChannel": "music command channel",
+	"botPrefix": "prefix to call bot, example ! or %"
 }
 ```
 ### To get token ###

@@ -2,7 +2,7 @@ var Discord = require('discord.js');
 var settings = require('./settings.json');
 var ytdl = require('ytdl-core');
 
-var bot = new Discord.Client();
+var bot = new Discord.Client({autoReconnect: true});
 
 let queue = [];
 let playing = false;
@@ -35,6 +35,7 @@ var commands = {
 
     "queue": {
         description: "Add audio from a youtube link to the queue",
+        channel: getBotChannelName(),
         process: function(bot, message, args) {
           if (args.length === 0) {
             bot.sendMessage(message.channel, "You have to bring a link with the command");
@@ -47,6 +48,7 @@ var commands = {
 
     "queuesize": {
         description: "List the play queue",
+        channel: getBotChannelName(),
         process: function(bot, message, args) {
           bot.reply(message, "There are " + queue.length + " songs in queue");
         }
@@ -54,6 +56,7 @@ var commands = {
 
     "clearqueue": {
         description: "Clears the queue and stops the music",
+        channel: getBotChannelName(),
         process: function(bot, message, args) {
           clearQueue(message);
         }
@@ -61,6 +64,7 @@ var commands = {
 
     "stop": {
         description: "Stops playing",
+        channel: getBotChannelName(),
         process: function(bot, message, args) {
           stopPlaying(message);
         }
@@ -68,6 +72,7 @@ var commands = {
 
     "start": {
         description: "Starts with next song in the queue",
+        channel: getBotChannelName(),
         process: function(bot, message, args) {
           playing = true;
         }
@@ -75,6 +80,7 @@ var commands = {
 
     "skip": {
         description: "Skip to the next song in queue",
+        channel: getBotChannelName(),
         process: function(bot, message, args) {
           playNextTrack();
         }
@@ -82,6 +88,7 @@ var commands = {
 
     "join": {
         description: "Selects in which channel the bot should live",
+        channel: getBotChannelName(),
         process: function(bot, message, args) {
           bot.joinVoiceChannel(args[0], function(error) {
       		    console.log(error.message);
@@ -102,6 +109,7 @@ var commands = {
 
     "joinme": {
         description: "Join the channel of the user",
+        channel: getBotChannelName(),
         process: function(bot, message, args) {
             if(message.author.voiceChannel) {
                 bot.joinVoiceChannel(message.author.voiceChannel, function(error) {
@@ -113,6 +121,7 @@ var commands = {
 
     "leave": {
         description: "Makes the bot leave the channel",
+        channel: getBotChannelName(),
         process: function(bot, message, args) {
             bot.leaveVoiceChannel(bot.voiceConnection.voiceChannel);
         }
@@ -121,6 +130,7 @@ var commands = {
 
 bot.on("ready", function() {
     console.log("Ready! Serving on " + bot.servers.length + " servers :)");
+    bot.setPlayingGame("with your feelings");
     bot.servers.forEach(function(server) {
       if(server.channels.get("name", getBotChannelName(bot)) == null) {
         console.log("The channel '" + getBotChannelName(bot) + "' doesn't exist on server " + server.name);
@@ -130,7 +140,7 @@ bot.on("ready", function() {
 });
 
 bot.on("message", function(message){
-    if (message.channel.name == getBotChannelName(bot) && message.author.id != bot.user.id && message.content[0] === '!') {
+    if (message.author.id != bot.user.id && message.content[0] === settings.botPrefix) {
         console.log("Treating " + message.content + " from " + message.author.username + " as a command.");
         let command = message.content.substring(1).split(" ");
         let cmd = commands[command[0]];
@@ -138,7 +148,7 @@ bot.on("message", function(message){
         if (command[0] === "help") {
             bot.sendMessage(message.channel, "Available Commands:", function(){
                 for (var cmd in commands) {
-                    var info = "!" + cmd;
+                    var info = settings.botPrefix + cmd;
                     var usage = commands[cmd].usage;
                     if (usage) {
                         info += " " + usage;
@@ -152,8 +162,10 @@ bot.on("message", function(message){
             });
         } else if(cmd) {
             try{
-                command.shift();
-                cmd.process(bot, message, command);
+                if (cmd.channel == undefined || cmd.channel == message.channel.name ) {
+                  command.shift();
+                  cmd.process(bot, message, command);
+                }
             } catch(e) {
                 bot.sendMessage(message.channel, "And it was at that moment Daniel knew, he fucked up");
                 console.log(e.stack);
@@ -163,7 +175,7 @@ bot.on("message", function(message){
 });
 
 function getBotChannelName(client) {
-    return (settings.channelName).toLowerCase();
+    return (settings.musicChannel).toLowerCase();
 }
 
 function checkQueue() {
