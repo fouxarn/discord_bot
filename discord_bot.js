@@ -147,20 +147,7 @@ bot.on("message", function(message){
         let cmd = commands[command[0]];
 
         if (command[0] === "help") {
-            bot.sendMessage(message.channel, "Available Commands:", function(){
-                for (var cmd in commands) {
-                    var info = settings.botPrefix + cmd;
-                    var usage = commands[cmd].usage;
-                    if (usage) {
-                        info += " " + usage;
-                    }
-                    var description = commands[cmd].description;
-                    if (description) {
-                        info += "\n\t" + description;
-                    }
-                    bot.sendMessage(message.channel, info);
-                }
-            });
+          printCommands(message.channel);
         } else if(cmd) {
             try{
                 if (cmd.channel == undefined || cmd.channel == message.channel.name ) {
@@ -174,6 +161,24 @@ bot.on("message", function(message){
         }
     }
 });
+
+function printCommands(channel) {
+  let msg = "Available Commands: \n ```";
+  for (let cmd in commands) {
+    msg += settings.botPrefix + cmd;
+    let usage = commands[cmd].usage;
+    if (usage) {
+      msg += " " + usage;
+    }
+    let description = commands[cmd].description;
+    if (description) {
+        msg += "\n\t" + description;
+    }
+    msg += "\n";
+  }
+  msg += "```";
+  bot.sendMessage(channel, msg);
+}
 
 function getBotChannelName(client) {
     return (settings.musicChannel).toLowerCase();
