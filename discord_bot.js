@@ -175,13 +175,17 @@ function printCommands(channel) {
     msg += settings.botPrefix + cmd;
     let usage = commands[cmd].usage;
     if (usage) {
-      msg += " " + usage;
+      msg += ` ${usage}`;
+    }
+    let restricted = commands[cmd].channel;
+    if (restricted) {
+      msg += ` (in #${restricted})`;
     }
     let description = commands[cmd].description;
     if (description) {
-        msg += "\n\t" + description;
+        msg += `\n\t${description}`;
     }
-    msg += "\n";
+    msg += "\n\n";
   }
   msg += "```";
   bot.sendMessage(channel, msg);
