@@ -47,11 +47,11 @@ var commands = {
         }
     },
 
-    "queuesize": {
-        description: "List the play queue",
+    "listqueue": {
+        description: "List all the songs in queue",
         channel: getBotChannelName(),
         process: function(bot, message, args) {
-          bot.reply(message, "There are " + queue.length + " songs in queue");
+          listQueue(message.channel);
         }
     },
 
@@ -204,8 +204,32 @@ function checkQueue() {
 }
 
 function addToQueue(videoID, message) {
-  queue.push(videoID);
-  bot.reply(message, "Added song to queue! :)");
+  ytdl.getInfo(videoID, (error, info) => {
+    if (error) {
+      console.log(error);
+      bot.reply(message, "There was a problem adding the video.");
+    } else {
+      let track = {
+        title: info.title,
+        author: info.author,
+        view_count: info.view_count,
+        length_seconds: info.length_seconds,
+        info: info
+      };
+      queue.push(track);
+      bot.reply(message, "Added song to queue! :)");
+    }
+  });
+}
+
+function listQueue(channel) {
+  let message = "Songqueue: ```";
+  for (let index in queue) {
+    let track = queue[index];
+    message += `${index}. ${track.title} by ${track.author}, [${track.view_count}] views, ${track.length_seconds} seconds\n\n`;
+  };
+  message += "```";
+  bot.sendMessage(channel, message);
 }
 
 function playNextTrack() {
@@ -219,8 +243,7 @@ function playNextTrack() {
       filter: (format) => format.container === 'mp4',
       quality: 'lowest',
     };
-    let stream = ytdl(queue[0], options);
-    //console.log(ytdl.getInfo(queue[0]));
+    let stream = ytdl.downloadFromInfo(queue[0].info, options);
     stream.on('error', function(error) {
       console.log(error);
     });
