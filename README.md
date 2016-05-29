@@ -7,7 +7,9 @@ A bot for discord with youtubing capabilitys
 {
 	"token": "generated bot token",
 	"musicChannel": "music command channel",
-	"botPrefix": "prefix to call bot, example ! or %"
+	"botPrefix": "prefix to call bot, example ! or %",
+	"redis_port": "redis port",
+	"redis_ip": "redis ip"
 }
 ```
 ### To get token ###

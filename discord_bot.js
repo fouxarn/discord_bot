@@ -1,8 +1,10 @@
 var Discord = require('discord.js');
 var settings = require('./settings.json');
 var ytdl = require('ytdl-core');
+var storage = require('./lib/storage.js');
 
 var bot = new Discord.Client({autoReconnect: true});
+var store = new storage();
 
 let queue = [];
 let playing = false;
@@ -34,15 +36,20 @@ var commands = {
     },
 
     "queue": {
-        usage: "[youtube-url]",
+        usage: "[youtube-url] else random",
         description: "Add audio from a youtube link to the queue",
         channel: getBotChannelName(),
         process: function(bot, message, args) {
           if (args.length === 0) {
-            bot.sendMessage(message.channel, "You have to bring a link with the command");
+            store.getRandomUrl((url) => {
+              playing = true;
+              addToQueue(url);
+            });
+            //bot.sendMessage(message.channel, "You have to bring a link with the command");
           } else {
             playing = true;
             addToQueue(args[0], message);
+            store.storeTrackUrl(args[0]);
           }
         }
     },
@@ -134,6 +141,15 @@ var commands = {
             bot.sendMessage(message.channel, "O-oooooooooo AAAAE-A-A-I-A-U- JO-oooooooooooo AAE-O-A-A-U-U-A- E-eee-ee-eee AAAAE-A-E-I-E-A-JO-ooo-oo-oo-oo EEEEO-A-AAA-AAAA");
         }
     },
+
+    "toplist": {
+      description: "Prints usage toplist",
+      process: function(bot, message, args) {
+        store.getCommandLog((string) => {
+          bot.sendMessage(message.channel, string);
+        });
+      }
+    },
 };
 
 bot.on("ready", function() {
@@ -160,6 +176,7 @@ bot.on("message", function(message){
                 if (cmd.channel == undefined || cmd.channel == message.channel.name ) {
                   command.shift();
                   cmd.process(bot, message, command);
+                  store.logCommand(message.author);
                 }
             } catch(e) {
                 bot.sendMessage(message.channel, "And it was at that moment Daniel knew, he fucked up");
@@ -223,7 +240,7 @@ function addToQueue(videoID, message) {
 }
 
 function listQueue(channel) {
-  let message = "Songqueue: ```";
+  let message = "Songqueue: \n ```";
   for (let index in queue) {
     let track = queue[index];
     message += `${index}. ${track.title} by ${track.author}, [${track.view_count}] views, ${track.length_seconds} seconds\n\n`;
