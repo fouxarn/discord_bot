@@ -36,20 +36,22 @@ var commands = {
     },
 
     "queue": {
-        usage: "[youtube-url] else random",
+        usage: "[youtube-url] or [random]",
         description: "Add audio from a youtube link to the queue",
         channel: getBotChannelName(),
         process: function(bot, message, args) {
           if (args.length === 0) {
-            store.getRandomUrl((url) => {
-              playing = true;
-              addToQueue(url);
-            });
-            //bot.sendMessage(message.channel, "You have to bring a link with the command");
+            bot.sendMessage(message.channel, "You have to bring a link with the command");
           } else {
             playing = true;
-            addToQueue(args[0], message);
-            store.storeTrackUrl(args[0]);
+            if (args[0] === "random") {
+              store.getRandomUrl((url) => {
+                addToQueue(url, message);
+              });
+            } else {
+              addToQueue(args[0], message);
+              store.storeTrackUrl(args[0]);
+            }
           }
         }
     },
