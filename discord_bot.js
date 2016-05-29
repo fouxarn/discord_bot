@@ -134,6 +134,36 @@ var commands = {
             bot.sendMessage(message.channel, "O-oooooooooo AAAAE-A-A-I-A-U- JO-oooooooooooo AAE-O-A-A-U-U-A- E-eee-ee-eee AAAAE-A-E-I-E-A-JO-ooo-oo-oo-oo EEEEO-A-AAA-AAAA");
         }
     },
+    "joke":{
+      description: "I will tell a funny joke about a random user",
+      process: function(bot, message, args){
+
+        var http = require('http');
+
+        var users = message.channel.server.members.getAll("status", "online");
+        var winner = Math.floor(Math.random() * users.length);
+        var options = {
+          host : 'api.icndb.com',
+          path : '/jokes/random?firstName='+users[winner]+'&lastName=&?escape=javascript'
+        };
+
+        callback = function(response) {
+          var str = '';
+          response.on('data', function (chunk) {
+            str += chunk;
+          });
+          response.on('end', function () {
+              jobject = JSON.parse(str);
+              joke = jobject.value.joke;
+            bot.sendMessage(message.channel, joke);
+          });
+        }
+        http.request(options, callback).end();
+      }
+    }
+
+
+
 };
 
 bot.on("ready", function() {
