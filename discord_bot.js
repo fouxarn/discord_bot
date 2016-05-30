@@ -2,6 +2,7 @@ var Discord = require('discord.js');
 var settings = require('./settings.json');
 var ytdl = require('ytdl-core');
 var storage = require('./lib/storage.js');
+var http = require('http');
 
 var bot = new Discord.Client({
     autoReconnect: true
@@ -23,9 +24,8 @@ var commands = {
         usage: "[username]",
         description: "Chooses a lucky winner between online members of the server",
         process: function(bot, message, args) {
-            var users = message.channel.server.members.getAll("status", "online");
-            var winner = Math.floor(Math.random() * users.length);
-            bot.sendMessage(message.channel, users[winner] + " is the lucky winner!");
+            let winner = randomUser(message.channel.server);
+            bot.sendMessage(message.channel, winner + " is the lucky winner!");
         }
     },
 
@@ -155,31 +155,27 @@ var commands = {
         }
     },
 
-    "joke":{
-      description: "I will tell a funny joke about a random user",
-      process: function(bot, message, args){
-        var http = require('http');
-        var users = message.channel.server.members.getAll("status", "online");
-        var winner = Math.floor(Math.random() * users.length);
-        var options = {
-          host : 'api.icndb.com',
-          path : '/jokes/random?firstName='+users[winner]+'&lastName=&?escape=javascript'
-        };
+    "joke": {
+        description: "I will tell a funny joke about a random user",
+        process: function(bot, message, args) {
+            let winner = randomUser(message.channel.server);
+            let options = {
+                host: 'api.icndb.com',
+                path: `/jokes/random?firstName=${winner.username}&lastName=`
+            };
 
-        callback = function(response) {
-          var str = '';
-          response.on('data', function (chunk) {
-            str += chunk;
-          });
-          response.on('end', function () {
-              jobject = JSON.parse(str);
-              joke = jobject.value.joke;
-            bot.sendMessage(message.channel, joke);
-          });
+            http.request(options, (response) => {
+                let str = '';
+                response.on('data', (chunk) => {
+                    str += chunk;
+                });
+                response.on('end', () => {
+                    let joke = JSON.parse(str).value.joke;
+                    bot.sendMessage(message.channel, joke.replace(/&quot;/g, '"'));
+                });
+            }).end();
         }
-        http.request(options, callback).end();
-      }
-    }
+    },
 };
 
 bot.on("ready", function() {
@@ -318,6 +314,12 @@ function clearQueue(message) {
 
 function queueEmpty() {
     return queue.length === 0;
+}
+
+function randomUser(server) {
+    let users = server.members.getAll("status", "online");
+    let winner = Math.floor(Math.random() * users.length);
+    return users[winner];
 }
 
 bot.loginWithToken(settings.token).catch((error) => {
