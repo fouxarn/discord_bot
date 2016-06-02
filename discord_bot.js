@@ -1,17 +1,14 @@
 const http = require('http');
 const Discord = require('discord.js');
-const ytdl = require('ytdl-core');
 const settings = require('./settings.json');
 const Storage = require('./lib/storage.js');
+const Player = require('./lib/player.js');
 
 const bot = new Discord.Client({
   autoReconnect: true,
 });
 const store = new Storage();
-
-let queue = [];
-let playing = false;
-let nowPlaying;
+const player = new Player();
 
 const commands = {
   ping: {
@@ -46,14 +43,27 @@ const commands = {
       if (args.length === 0) {
         bot.sendMessage(message.channel, 'You have to bring a link with the command');
       } else {
-        playing = true;
         if (args[0] === 'random') {
           store.getRandomUrl((url) => {
-            addToQueue(url, message);
+            player.add(url, (error) => {
+              if (error) {
+                console.log(error);
+                bot.reply(message, 'There was a problem adding the video.');
+              } else {
+                bot.reply(message, 'Added song to queue! :)');
+              }
+            });
           });
         } else {
-          addToQueue(args[0], message);
-          store.storeTrackUrl(args[0]);
+          player.add(args[0], (error) => {
+            if (error) {
+              console.log(error);
+              bot.reply(message, 'There was a problem adding the video.');
+            } else {
+              bot.reply(message, 'Added song to queue! :)');
+              store.storeTrackUrl(args[0]);
+            }
+          });
         }
       }
     },
@@ -63,15 +73,16 @@ const commands = {
     description: 'List all the songs in queue',
     channel: getBotChannelName(),
     process: (bot, message) => {
-      listQueue(message.channel);
+      bot.sendMessage(message.channel, player.getList());
     },
   },
 
   clearqueue: {
-    description: 'Clears the queue and stops the music',
+    description: 'Clears the queue',
     channel: getBotChannelName(),
     process: (bot, message) => {
-      clearQueue(message);
+      player.clear();
+      bot.reply(message, 'The queue has been cleared!');
     },
   },
 
@@ -79,7 +90,9 @@ const commands = {
     description: 'Stops playing',
     channel: getBotChannelName(),
     process: (bot, message) => {
-      stopPlaying(message);
+      bot.voiceConnection.stopPlaying();
+      player.stopPlaying();
+      bot.sendMessage(message, 'Stopped playing audio');
     },
   },
 
@@ -87,7 +100,7 @@ const commands = {
     description: 'Starts with next song in the queue',
     channel: getBotChannelName(),
     process: () => {
-      playing = true;
+      player.startPlaying();
     },
   },
 
@@ -95,10 +108,12 @@ const commands = {
     description: 'Prints wants playing right now',
     channel: getBotChannelName(),
     process: (bot, message) => {
+      const nowPlaying = player.nowPlaying;
       let msg;
       if (nowPlaying) {
-        msg = 'Now playing:\n\n ' +
-            `${nowPlaying.title} by ${nowPlaying.author}, [${nowPlaying.view_count}] views, ${nowPlaying.length_seconds} seconds`;
+        msg = 'Now playing:\n' +
+            `${nowPlaying.title} by ${nowPlaying.author}, ` +
+            `[${nowPlaying.view_count}] views, ${nowPlaying.length_seconds} seconds`;
       } else {
         msg = 'Not playing anything at the moment';
       }
@@ -110,7 +125,7 @@ const commands = {
     description: 'Skip to the next song in queue',
     channel: getBotChannelName(),
     process: (bot) => {
-      playNextTrack();
+      player.playNextTrack(bot.voiceChannel);
     },
   },
 
@@ -128,7 +143,8 @@ const commands = {
   cat: {
     description: 'I will give you my favorite cat image <3',
     process: (bot, message) => {
-      bot.sendFile(message, 'http://placekitten.com/' + (Math.floor((Math.random() * 900) + 100) + '/' + Math.floor((Math.random() * 900) + 100)), 'cat.png', (err) => {
+      const url = `http://placekitten.com/${Math.floor((Math.random() * 900) + 100)}/${Math.floor((Math.random() * 900) + 100)}`;
+      bot.sendFile(message, url, 'cat.png', (err) => {
         if (err) {
           console.log('couldn\'t send image:', err);
         }
@@ -151,16 +167,18 @@ const commands = {
   leave: {
     description: 'Makes the bot leave the channel',
     channel: getBotChannelName(),
-    process: (bot, message) => {
+    process: (bot) => {
       bot.leaveVoiceChannel(bot.voiceConnection.voiceChannel);
-    }
+    },
   },
 
   power: {
     description: 'BRAINPOWER!',
     process: (bot, message) => {
-      bot.sendMessage(message.channel, 'O-oooooooooo AAAAE-A-A-I-A-U- JO-oooooooooooo AAE-O-A-A-U-U-A- E-eee-ee-eee AAAAE-A-E-I-E-A-JO-ooo-oo-oo-oo EEEEO-A-AAA-AAAA');
-    }
+      const msg = 'O-oooooooooo AAAAE-A-A-I-A-U- JO-oooooooooooo AAE-O-A-A-U-U-A- ' +
+        'E-eee-ee-eee AAAAE-A-E-I-E-A-JO-ooo-oo-oo-oo EEEEO-A-AAA-AAAA';
+      bot.sendMessage(message.channel, msg);
+    },
   },
 
   toplist: {
@@ -178,7 +196,7 @@ const commands = {
       const winner = randomUser(message.channel.server);
       const options = {
         host: 'api.icndb.com',
-        path: `/jokes/random?firstName=${winner.username}&lastName=`
+        path: `/jokes/random?firstName=${winner.username}&lastName=`,
       };
 
       http.request(options, (response) => {
@@ -196,19 +214,19 @@ const commands = {
 };
 
 bot.on('ready', () => {
-  console.log('Ready! Serving on " + bot.servers.length + " servers :)');
+  console.log(`Ready! Serving on ${bot.servers.length} servers :)`);
   bot.setPlayingGame('with your feelings');
   bot.servers.forEach((server) => {
     if (server.channels.get('name', getBotChannelName(bot)) === null) {
       console.log(`The channel "${getBotChannelName(bot)}" doesn't exist on server ${server.name}`);
     }
   });
-  checkQueue();
+  setInterval(checkQueue, 5000);
 });
 
 bot.on('message', (message) => {
   if (message.author.id !== bot.user.id && message.content[0] === settings.botPrefix) {
-    console.log('Treating ' + message.content + ' from ' + message.author.username + ' as a command.');
+    console.log(`Treating ${message.content} from ${message.author.username} as a command.`);
     const command = message.content.substring(1).split(' ');
     const cmd = commands[command[0]];
 
@@ -231,7 +249,7 @@ bot.on('message', (message) => {
 
 function printCommands(channel) {
   let msg = 'Available Commands: \n ```';
-  for (let cmd in commands) {
+  Object.keys(commands).forEach((cmd) => {
     msg += settings.botPrefix + cmd;
     const usage = commands[cmd].usage;
     if (usage) {
@@ -246,7 +264,7 @@ function printCommands(channel) {
       msg += `\n\t${description}`;
     }
     msg += '\n\n';
-  }
+  });
   msg += '```';
   bot.sendMessage(channel, msg);
 }
@@ -256,81 +274,9 @@ function getBotChannelName() {
 }
 
 function checkQueue() {
-  if (playing && !queueEmpty() && !bot.voiceConnection.playing) {
-    playNextTrack();
+  if (player.playing && !player.empty() && !bot.voiceConnection.playing) {
+    player.playNextTrack(bot.voiceConnection);
   }
-
-  setTimeout(checkQueue, 5000);
-}
-
-function addToQueue(videoID, message) {
-  ytdl.getInfo(videoID, (error, info) => {
-    if (error) {
-      console.log(error);
-      bot.reply(message, 'There was a problem adding the video.');
-    } else {
-      const track = {
-        title: info.title,
-        author: info.author,
-        view_count: info.view_count,
-        length_seconds: info.length_seconds,
-        info,
-      };
-      queue.push(track);
-      bot.reply(message, 'Added song to queue! :)');
-    }
-  });
-}
-
-function listQueue(channel) {
-  let message = 'Songqueue: \n ```';
-  queue.forEach((track, index) => {
-    message += `${index}. ${track.title} by ${track.author}, [${track.view_count}] views, ${track.length_seconds} seconds\n\n`;
-  });
-  message += '```';
-  bot.sendMessage(channel, message);
-}
-
-function playNextTrack() {
-  if (queueEmpty()) {
-    bot.voiceConnection.stopPlaying();
-    return;
-  }
-
-  try {
-    const options = {
-      filter: (format) => format.container === 'mp4',
-      quality: 'lowest',
-    };
-    const stream = ytdl.downloadFromInfo(queue[0].info, options);
-    stream.on('error', (error) => {
-      console.log(error);
-    });
-    nowPlaying = queue[0];
-
-    bot.voiceConnection.playRawStream(stream, {
-      volume: 0.2,
-    });
-  } catch (exception) {
-    console.error(exception);
-  }
-
-  queue.splice(0, 1);
-}
-
-function stopPlaying(message) {
-  bot.voiceConnection.stopPlaying();
-  playing = false;
-  bot.sendMessage(message, 'Stopped playing audio');
-}
-
-function clearQueue(message) {
-  queue = [];
-  bot.reply(message, 'The queue has been cleared!');
-}
-
-function queueEmpty() {
-  return queue.length === 0;
 }
 
 function randomUser(server) {
