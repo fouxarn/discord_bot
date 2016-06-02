@@ -1,5 +1,5 @@
 # discord_bot
-A bot for discord with youtubing capabilitys
+A bot for discord with youtubing capabilities
 
 
 ### settings.json ###
