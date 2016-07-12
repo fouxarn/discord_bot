@@ -74,6 +74,7 @@ const commands = {
     channel: getBotChannelName(),
     process: (bot, message) => {
       player.onRadio = true;
+      player.queueRandom();
       bot.reply(message, 'Radio started!');
     },
   },
