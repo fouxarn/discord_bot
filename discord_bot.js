@@ -8,7 +8,8 @@ const bot = new Discord.Client({
   autoReconnect: true,
 });
 const store = new Storage();
-const player = new Player(store);
+const player = new Player();
+let radio = false;
 
 const commands = {
   ping: {
@@ -70,12 +71,22 @@ const commands = {
   },
 
   radio: {
-    description: 'Starts playing random songs forever',
+    description: 'Starts/stops playing random songs forever',
     channel: getBotChannelName(),
     process: (bot, message) => {
-      player.onRadio = true;
-      player.queueRandom();
-      bot.reply(message, 'Radio started!');
+      radio = !radio;
+      if (radio) {
+        store.getRandomUrl((url) => {
+          player.add(url, (error) => {
+            if (error) console.log(error);
+          });
+        });
+        bot.reply(message, 'Radio started!');
+      } else {
+        bot.voiceConnection.stopPlaying();
+        player.stopPlaying();
+        bot.reply(message, 'Radio stopped!');
+      }
     },
   },
 
@@ -135,7 +146,7 @@ const commands = {
     description: 'Skip to the next song in queue',
     channel: getBotChannelName(),
     process: (bot) => {
-      player.playNextTrack(bot.voiceChannel);
+      player.playNextTrack(bot.voiceConnection);
     },
   },
 
@@ -284,8 +295,20 @@ function getBotChannelName() {
 }
 
 function checkQueue() {
-  if (player.playing && !player.empty() && !bot.voiceConnection.playing) {
-    player.playNextTrack(bot.voiceConnection);
+  if (player.playing && !bot.voiceConnection.playing) {
+    if (!player.empty()) {
+      player.playNextTrack(bot.voiceConnection);
+    } else if (radio) {
+      store.getRandomUrl((url) => {
+        player.add(url, (error) => {
+          if (error) {
+            console.log(error);
+          } else {
+            player.playNextTrack(bot.voiceConnection);
+          }
+        });
+      });
+    }
   }
 }
 
