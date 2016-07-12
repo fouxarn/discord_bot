@@ -8,7 +8,7 @@ const bot = new Discord.Client({
   autoReconnect: true,
 });
 const store = new Storage();
-const player = new Player();
+const player = new Player(store);
 
 const commands = {
   ping: {
@@ -69,6 +69,15 @@ const commands = {
     },
   },
 
+  radio: {
+    description: 'Starts playing random songs forever',
+    channel: getBotChannelName(),
+    process: (bot, message) => {
+      player.onRadio = true;
+      bot.reply(message, 'Radio started!');
+    },
+  },
+
   listqueue: {
     description: 'List all the songs in queue',
     channel: getBotChannelName(),
@@ -105,7 +114,7 @@ const commands = {
   },
 
   playing: {
-    description: 'Prints wants playing right now',
+    description: 'Prints whats playing right now',
     channel: getBotChannelName(),
     process: (bot, message) => {
       const nowPlaying = player.nowPlaying;
